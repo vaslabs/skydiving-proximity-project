@@ -1,3 +1,5 @@
+#include <SD.h>
+
 #include <TinyGPS.h>
  
 TinyGPS gps;
@@ -44,11 +46,40 @@ void add(long timestamp, long lat, long lon, long alt) {
     gps_entries[fifo_index].longitude = lon;
     gps_entries[fifo_index].altitude = alt;
 }
+
+byte writeBuffer[SIZE*32];
+
+int toByteBuffer(int i, long value) {
+    int longIndex;
+    long mask = 0xff;
+    long shiftedValue;
+    byte convertedValue;
+    for (longIndex = 0; longIndex < 8; longIndex++) {
+        shiftedValue = (value >> ((7-longIndex)*8) );
+        convertedValue = shiftedValue & mask;
+        writeBuffer[i++] = convertedValue;
+    }
+    return i;
+}
+
+void toBytes() {
+   int i = 0;
+   int entryIndex = 0;
+   while (i < SIZE*32) {
+       i = toByteBuffer(i, gps_entries[entryIndex].timestamp);
+       i = toByteBuffer(i, gps_entries[entryIndex].latitude);
+       i = toByteBuffer(i, gps_entries[entryIndex].longitude);
+       i = toByteBuffer(i, gps_entries[entryIndex].altitude);
+   }
+}
  
+File myFile; 
 void setup()
 {
   Serial.begin(9600);            //Set the GPS baud rate.
-  
+  toBytes();
+  myFile = SD.open("test.txt", FILE_WRITE);
+  myFile.write(writeBuffer, SIZE*32);
 }
  
 void loop()
