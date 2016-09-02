@@ -30,9 +30,6 @@ int DEG;
 int MIN1;
 int MIN2;
 
-void write_data() {
-     
-}
 
 void add(long timestamp, long lat, long lon, long alt) {
     if (fifo_index == SIZE - 1) {
@@ -74,12 +71,17 @@ void toBytes() {
 }
  
 File myFile; 
+
+void write_data() {
+     toBytes();
+     myFile.write(writeBuffer, SIZE*32);
+}
+
 void setup()
 {
   Serial.begin(9600);            //Set the GPS baud rate.
   toBytes();
   myFile = SD.open("test.txt", FILE_WRITE);
-  myFile.write(writeBuffer, SIZE*32);
 }
  
 void loop()
