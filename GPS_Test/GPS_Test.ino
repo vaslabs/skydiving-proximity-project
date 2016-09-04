@@ -1,16 +1,24 @@
+#include <SoftwareSerial.h>
+#include <TinyGPS.h>
+#include <DanyBotLCD.h>
 #include <SD.h>
 
-#include <TinyGPS.h>
- 
+DanyBotLCD lcd(0x27, 16, 2);
 TinyGPS gps;
+int i=0;
 int led = 13;
- 
+const int chipSelect = 10;
+
 long lat, lon, alt;
 unsigned long fix_age, time, date, speed, course;
 unsigned long chars;
 unsigned short sentences, failed_checksum;
 //int year;
 //byte month, day, hour, minute, second, hundredths;
+ 
+int DEG;
+int MIN1;
+int MIN2;
 
 class GPSEntry {
   public: 
@@ -20,16 +28,10 @@ class GPSEntry {
      long altitude;
 };
 
-const int SIZE = 64;
+const int SIZE = 8;
 
 GPSEntry gps_entries[SIZE];
 int fifo_index = -1;
-
-
-int DEG;
-int MIN1;
-int MIN2;
-
 
 void add(long timestamp, long lat, long lon, long alt) {
     if (fifo_index == SIZE - 1) {
@@ -42,6 +44,7 @@ void add(long timestamp, long lat, long lon, long alt) {
     gps_entries[fifo_index].latitude = lat;
     gps_entries[fifo_index].longitude = lon;
     gps_entries[fifo_index].altitude = alt;
+    Serial.println(fifo_index);
 }
 
 byte writeBuffer[SIZE*32];
@@ -69,25 +72,83 @@ void toBytes() {
        i = toByteBuffer(i, gps_entries[entryIndex].altitude);
    }
 }
- 
-File myFile; 
 
 void write_data() {
+  /*
      toBytes();
-     myFile.write(writeBuffer, SIZE*32);
+     String dataString = "";
+     //dataString == convertion of (writeBuffer,SIZE*32) into string
+     File dataFile = SD.open("datalog.txt", FILE_WRITE);
+     if (dataFile) {
+        dataFile.println(dataString);
+        dataFile.close();
+     }
+     */
 }
 
-void setup()
-{
-  Serial.begin(9600);            //Set the GPS baud rate.
-  toBytes();
-  myFile = SD.open("test.txt", FILE_WRITE);
+void LAT(){                       //Latitude state
+  DEG=lat/1000000;
+  MIN1=(lat/10000)%100;
+  MIN2=lat%10000;
+  lcd.setCursor(0,0);             // set the LCD cursor   position 
+  lcd.print("LAT:");              
+  lcd.print(DEG);
+  lcd.write(0xDF);
+  lcd.print(MIN1);
+  lcd.print(".");
+  lcd.print(MIN2);
+  lcd.print("'   ");
 }
+void LON(){                        //Longitude state
+  DEG=lon/1000000;
+  MIN1=(lon/10000)%100;
+  MIN2=lon%10000;
  
-void loop()
-{
+  lcd.setCursor(0,1);              // set the LCD cursor   position 
+  lcd.print("LON:");              
+  lcd.print(DEG);
+  lcd.write(0xDF);
+  lcd.print(MIN1);
+  lcd.print(".");
+  lcd.print(MIN2);
+  lcd.print("'   ");
+}
+
+void setup(){
+  Serial.begin(9600);
+  toBytes();
+  pinMode(led, OUTPUT);
+  if (!SD.begin(chipSelect)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    return;
+  }
+  Serial.println("card initialized.");
+  
+  lcd.init();  //Initializing the LCD 
+  lcd.backlight();
+  lcd.begin(16, 2);               // start the library
+  lcd.setCursor(0,0);             // set the LCD cursor   position 
+  lcd.print("GPS test");          // print a simple message on the LCD 
+  delay(2000);
+}
+
+void loop(){
+  while (Serial.available()){
+    digitalWrite(led, HIGH);
+    int c = Serial.read();                   // Read the GPS data
+    if (gps.encode(c))                        // Check the GPS data
+    {
+      // process new gps info here
+    }
+  }
+  digitalWrite(led, LOW);
   gps.get_position(&lat, &lon, &fix_age);     // retrieves +/- lat/long in 100000ths of a degree
   alt = gps.altitude();
   gps.get_datetime(&date, &time, &fix_age);   // time in hhmmsscc, date in ddmmyy
   add(time, lat, lon, alt);
+  //gps.crack_datetime(&year, &month, &day,    //Date/time cracking
+  //&hour, &minute, &second, &hundredths, &fix_age);  
+  LAT();
+  LON();
 }
