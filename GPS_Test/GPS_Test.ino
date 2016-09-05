@@ -6,6 +6,7 @@
 DanyBotLCD lcd(0x27, 16, 2);
 TinyGPS gps;
 int i=0;
+int x=0;
 int led = 13;
 const int chipSelect = 10;
 
@@ -44,7 +45,6 @@ void add(long timestamp, long lat, long lon, long alt) {
     gps_entries[fifo_index].latitude = lat;
     gps_entries[fifo_index].longitude = lon;
     gps_entries[fifo_index].altitude = alt;
-    Serial.println(fifo_index);
 }
 
 byte writeBuffer[SIZE*32];
@@ -74,16 +74,11 @@ void toBytes() {
 }
 
 void write_data() {
-  /*
-     toBytes();
-     String dataString = "";
-     //dataString == convertion of (writeBuffer,SIZE*32) into string
-     File dataFile = SD.open("datalog.txt", FILE_WRITE);
-     if (dataFile) {
-        dataFile.println(dataString);
-        dataFile.close();
-     }
-     */
+  toBytes();
+  byte data = (writeBuffer,SIZE*32);
+  File dataFile = SD.open("datalog.txt", FILE_WRITE);
+  dataFile.write(data);
+  dataFile.close();
 }
 
 void LAT(){                       //Latitude state
@@ -124,8 +119,7 @@ void setup(){
     return;
   }
   Serial.println("card initialized.");
-  
-  lcd.init();  //Initializing the LCD 
+  lcd.init();                     //Initializing the LCD 
   lcd.backlight();
   lcd.begin(16, 2);               // start the library
   lcd.setCursor(0,0);             // set the LCD cursor   position 
