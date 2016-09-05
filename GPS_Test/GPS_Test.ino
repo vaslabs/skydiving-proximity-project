@@ -5,8 +5,6 @@
 
 DanyBotLCD lcd(0x27, 16, 2);
 TinyGPS gps;
-int i=0;
-int x=0;
 int led = 13;
 const int chipSelect = 10;
 
@@ -71,13 +69,14 @@ void toBytes() {
        i = toByteBuffer(i, gps_entries[entryIndex].longitude);
        i = toByteBuffer(i, gps_entries[entryIndex].altitude);
    }
+   entryIndex++;
 }
 
 void write_data() {
   toBytes();
-  byte data = (writeBuffer,SIZE*32);
+  //Serial.write(writeBuffer,SIZE*32);
   File dataFile = SD.open("datalog.txt", FILE_WRITE);
-  dataFile.write(data);
+  dataFile.write(writeBuffer,SIZE*32);
   dataFile.close();
 }
 
