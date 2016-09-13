@@ -1,5 +1,6 @@
+//#include <SD.h>
+
 #include <SoftwareSerial.h>
-#include <SD.h>
 // Connect the GPS RX/TX to arduino pins 4 and 3
 SoftwareSerial serial = SoftwareSerial(4,3);
 
@@ -54,14 +55,14 @@ void toBytes() {
        i = toByteBuffer(i, gps_entries[entryIndex].latitude);
        i = toByteBuffer(i, gps_entries[entryIndex].longitude);
        i = toByteBuffer(i, gps_entries[entryIndex].altitude);
+       entryIndex++;    
    }
-   entryIndex++;
 }
 
 void write_data() {
   toBytes();
   //Serial.write(writeBuffer,SIZE*32);
-  File dataFile = SD.open("datalog.txt", FILE_WRITE);
+  File dataFile = SD.open("datalog.sdc", FILE_WRITE);
   dataFile.write(writeBuffer,SIZE*32);
   dataFile.close();
 }
@@ -197,6 +198,12 @@ void setup()
   Serial.println("GPS Device has been configured");
 }
 
+const long YEAR_SHIFT = 10000000000000;
+const long MONTH_SHIFT = 100000000000;
+const long DAY_SHIFT = 1000000000;
+const long HOUR_SHIFT = 10000000;
+const long MINUTE_SHIFT = 100000;
+const long SECOND_SHIFT = 1000;
 void loop() {
   if ( processGPS() ) {
     Serial.print("#SV: ");      Serial.print(pvt.numSV);
@@ -207,7 +214,12 @@ void loop() {
     Serial.print(" heading: "); Serial.print(pvt.heading/100000.0f);
     Serial.print(" hAcc: ");    Serial.print(pvt.hAcc/1000.0f);
     Serial.println();
-    
+    long milliseconds = pvt.nano/1000000;
+    milliseconds = milliseconds < 0L ? 0 : milliseconds;
+    long timestamp = pvt.year * YEAR_SHIFT + pvt.month*MONTH_SHIFT
+                      + pvt.day*DAY_SHIFT + pvt.hour*HOUR_SHIFT
+                      + pvt.minute*MINUTE_SHIFT + pvt.second*SECOND_SHIFT
+                      + milliseconds;
     add(pvt.iTOW, pvt.lat, pvt.lon, pvt.hMSL);
   }
 }
