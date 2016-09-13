@@ -1,7 +1,73 @@
 #include <SoftwareSerial.h>
-
+#include <SD.h>
 // Connect the GPS RX/TX to arduino pins 4 and 3
 SoftwareSerial serial = SoftwareSerial(4,3);
+
+//-------------------Buffer-----------------------
+class GPSEntry {
+  public: 
+     long timestamp;
+     long latitude;
+     long longitude;
+     long altitude;
+};
+
+const int SIZE = 8;
+
+GPSEntry gps_entries[SIZE];
+
+int fifo_index = -1;
+
+void add(long timestamp, long lat, long lon, long alt) {
+    if (fifo_index == SIZE - 1) {
+      write_data();  
+      fifo_index = 0; 
+    }
+    else
+      fifo_index++;
+    gps_entries[fifo_index].timestamp = timestamp;
+    gps_entries[fifo_index].latitude = lat;
+    gps_entries[fifo_index].longitude = lon;
+    gps_entries[fifo_index].altitude = alt;
+}
+
+byte writeBuffer[SIZE*32];
+
+int toByteBuffer(int i, long value) {
+    int longIndex;
+    long mask = 0xff;
+    long shiftedValue;
+    byte convertedValue;
+    for (longIndex = 0; longIndex < 8; longIndex++) {
+        shiftedValue = (value >> ((7-longIndex)*8) );
+        convertedValue = shiftedValue & mask;
+        writeBuffer[i++] = convertedValue;
+    }
+    return i;
+}
+
+void toBytes() {
+   int i = 0;
+   int entryIndex = 0;
+   while (i < SIZE*32) {
+       i = toByteBuffer(i, gps_entries[entryIndex].timestamp);
+       i = toByteBuffer(i, gps_entries[entryIndex].latitude);
+       i = toByteBuffer(i, gps_entries[entryIndex].longitude);
+       i = toByteBuffer(i, gps_entries[entryIndex].altitude);
+   }
+   entryIndex++;
+}
+
+void write_data() {
+  toBytes();
+  //Serial.write(writeBuffer,SIZE*32);
+  File dataFile = SD.open("datalog.txt", FILE_WRITE);
+  dataFile.write(writeBuffer,SIZE*32);
+  dataFile.close();
+}
+
+//-----------------End of buffer------------------
+
 
 //Configure GPS module
 const char UBLOX_INIT[] PROGMEM = {
@@ -141,6 +207,8 @@ void loop() {
     Serial.print(" heading: "); Serial.print(pvt.heading/100000.0f);
     Serial.print(" hAcc: ");    Serial.print(pvt.hAcc/1000.0f);
     Serial.println();
+    
+    add(pvt.iTOW, pvt.lat, pvt.lon, pvt.hMSL);
   }
 }
 
