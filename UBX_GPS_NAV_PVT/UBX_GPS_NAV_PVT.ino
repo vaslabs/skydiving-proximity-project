@@ -1,8 +1,9 @@
-//#include <SD.h>
+#include <SD.h>
 
 #include <SoftwareSerial.h>
 // Connect the GPS RX/TX to arduino pins 4 and 3
-SoftwareSerial serial = SoftwareSerial(4,3);
+SoftwareSerial serial = SoftwareSerial(2,3);
+const int chipSelect = 10;
 
 //-------------------Buffer-----------------------
 class GPSEntry {
@@ -196,6 +197,12 @@ void setup()
     delay(5); // simulating a 38400baud pace (or less), otherwise commands are not accepted by the device.
   }
   Serial.println("GPS Device has been configured");
+  if (!SD.begin(chipSelect)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    return;
+  }
+  Serial.println("card initialized.");
 }
 
 const long YEAR_SHIFT = 10000000000000;
