@@ -205,12 +205,12 @@ void setup()
   Serial.println("card initialized.");
 }
 
-const long YEAR_SHIFT = 10000000000000;
-const long MONTH_SHIFT = 100000000000;
-const long DAY_SHIFT = 1000000000;
-const long HOUR_SHIFT = 10000000;
-const long MINUTE_SHIFT = 100000;
-const long SECOND_SHIFT = 1000;
+const long YEAR_SHIFT = 10000000000000L;
+const long MONTH_SHIFT = 100000000000L;
+const long DAY_SHIFT = 1000000000L;
+const long HOUR_SHIFT = 10000000L;
+const long MINUTE_SHIFT = 100000L;
+const long SECOND_SHIFT = 1000L;
 void loop() {
   if ( processGPS() ) {
     Serial.print("#SV: ");      Serial.print(pvt.numSV);
@@ -227,7 +227,7 @@ void loop() {
                       + pvt.day*DAY_SHIFT + pvt.hour*HOUR_SHIFT
                       + pvt.minute*MINUTE_SHIFT + pvt.second*SECOND_SHIFT
                       + milliseconds;
-    add(pvt.iTOW, pvt.lat, pvt.lon, pvt.hMSL);
+    add(timestamp, pvt.lat, pvt.lon, pvt.hMSL);
   }
 }
 
