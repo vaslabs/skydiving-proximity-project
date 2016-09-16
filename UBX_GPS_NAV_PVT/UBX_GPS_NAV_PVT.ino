@@ -8,10 +8,10 @@ const int chipSelect = 10;
 //-------------------Buffer-----------------------
 class GPSEntry {
   public: 
-     long timestamp;
-     long latitude;
-     long longitude;
-     long altitude;
+     long long timestamp;
+     long long latitude;
+     long long longitude;
+     long long altitude;
 };
 
 const int SIZE = 8;
@@ -20,7 +20,7 @@ GPSEntry gps_entries[SIZE];
 
 int fifo_index = -1;
 
-void add(long timestamp, long lat, long lon, long alt) {
+void add(long long timestamp, long long lat, long long lon, long long alt) {
     if (fifo_index == SIZE - 1) {
       write_data();  
       fifo_index = 0; 
@@ -205,12 +205,12 @@ void setup()
   Serial.println("card initialized.");
 }
 
-const long YEAR_SHIFT = 10000000000000L;
-const long MONTH_SHIFT = 100000000000L;
-const long DAY_SHIFT = 1000000000L;
-const long HOUR_SHIFT = 10000000L;
-const long MINUTE_SHIFT = 100000L;
-const long SECOND_SHIFT = 1000L;
+const long long YEAR_SHIFT = 10000000000000L;
+const long long MONTH_SHIFT = 100000000000L;
+const long long DAY_SHIFT = 1000000000L;
+const long long HOUR_SHIFT = 10000000L;
+const long long MINUTE_SHIFT = 100000L;
+const long long SECOND_SHIFT = 1000L;
 void loop() {
   if ( processGPS() ) {
     Serial.print("#SV: ");      Serial.print(pvt.numSV);
@@ -221,12 +221,12 @@ void loop() {
     Serial.print(" heading: "); Serial.print(pvt.heading/100000.0f);
     Serial.print(" hAcc: ");    Serial.print(pvt.hAcc/1000.0f);
     Serial.println();
-    long milliseconds = pvt.nano/1000000;
+    long long milliseconds = pvt.nano/1000000;
     milliseconds = milliseconds < 0L ? 0 : milliseconds;
-    long timestamp = (long)(pvt.year) * YEAR_SHIFT + (long)(pvt.month)*MONTH_SHIFT
-                      + (long)(pvt.day)*DAY_SHIFT + (long)(pvt.hour)*HOUR_SHIFT
-                      + (long)(pvt.minute)*MINUTE_SHIFT + (long)(pvt.second)*SECOND_SHIFT
-                      + (long)milliseconds;
+    long long timestamp = (pvt.year) * YEAR_SHIFT + (pvt.month)*MONTH_SHIFT
+                      + (pvt.day)*DAY_SHIFT + (pvt.hour)*HOUR_SHIFT
+                      + (pvt.minute)*MINUTE_SHIFT + (pvt.second)*SECOND_SHIFT
+                      + milliseconds;
     add(timestamp, pvt.lat, pvt.lon, pvt.hMSL);
   }
 }
