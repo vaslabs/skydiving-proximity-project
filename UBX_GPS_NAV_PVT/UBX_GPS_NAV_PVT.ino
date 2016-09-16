@@ -223,9 +223,9 @@ void loop() {
     Serial.println();
     long milliseconds = pvt.nano/1000000;
     milliseconds = milliseconds < 0L ? 0 : milliseconds;
-    long timestamp = pvt.year * YEAR_SHIFT + pvt.month*MONTH_SHIFT
-                      + pvt.day*DAY_SHIFT + pvt.hour*HOUR_SHIFT
-                      + pvt.minute*MINUTE_SHIFT + pvt.second*SECOND_SHIFT
+    long timestamp = (pvt.year & 0x1fff) * YEAR_SHIFT + (pvt.month&0xf)*MONTH_SHIFT
+                      + (pvt.day&0x1f)*DAY_SHIFT + (pvt.hour & 0x1f)*HOUR_SHIFT
+                      + (pvt.minute&0x3f)*MINUTE_SHIFT + (pvt.second&0x3f)*SECOND_SHIFT
                       + milliseconds;
     add(timestamp, pvt.lat, pvt.lon, pvt.hMSL);
   }
