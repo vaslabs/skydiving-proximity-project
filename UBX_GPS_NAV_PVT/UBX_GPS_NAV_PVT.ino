@@ -4,14 +4,15 @@
 // Connect the GPS RX/TX to arduino pins 4 and 3
 SoftwareSerial serial = SoftwareSerial(2,3);
 const int chipSelect = 10;
-
+typedef unsigned long long ulong_64;
+typedef long long long_64;
 //-------------------Buffer-----------------------
 class GPSEntry {
   public: 
-     long long timestamp;
-     long long latitude;
-     long long longitude;
-     long long altitude;
+     ulong_64 timestamp;
+     long_64 latitude;
+     long_64 longitude;
+     long_64 altitude;
 };
 
 const int SIZE = 8;
@@ -20,7 +21,7 @@ GPSEntry gps_entries[SIZE];
 
 int fifo_index = -1;
 
-void add(long long timestamp, long long lat, long long lon, long long alt) {
+void add(unsigned long long timestamp, long long lat, long long lon, long long alt) {
     if (fifo_index == SIZE - 1) {
       write_data();  
       fifo_index = 0; 
@@ -35,10 +36,10 @@ void add(long long timestamp, long long lat, long long lon, long long alt) {
 
 byte writeBuffer[SIZE*32];
 
-int toByteBuffer(int i, long value) {
+int toByteBuffer(int i, long long value) {
     int longIndex;
-    long mask = 0xff;
-    long shiftedValue;
+    long_64 mask = 0xff;
+    long_64 shiftedValue;
     byte convertedValue;
     for (longIndex = 0; longIndex < 8; longIndex++) {
         shiftedValue = (value >> ((7-longIndex)*8) );
@@ -205,12 +206,12 @@ void setup()
   Serial.println("card initialized.");
 }
 
-const long long YEAR_SHIFT = 10000000000000L;
-const long long MONTH_SHIFT = 100000000000L;
-const long long DAY_SHIFT = 1000000000L;
-const long long HOUR_SHIFT = 10000000L;
-const long long MINUTE_SHIFT = 100000L;
-const long long SECOND_SHIFT = 1000L;
+const ulong_64 YEAR_SHIFT = 10000000000000L;
+const ulong_64 MONTH_SHIFT = 100000000000L;
+const ulong_64 DAY_SHIFT = 1000000000L;
+const ulong_64 HOUR_SHIFT = 10000000L;
+const ulong_64 MINUTE_SHIFT = 100000L;
+const ulong_64 SECOND_SHIFT = 1000L;
 void loop() {
   if ( processGPS() ) {
     Serial.print("#SV: ");      Serial.print(pvt.numSV);
@@ -221,9 +222,9 @@ void loop() {
     Serial.print(" heading: "); Serial.print(pvt.heading/100000.0f);
     Serial.print(" hAcc: ");    Serial.print(pvt.hAcc/1000.0f);
     Serial.println();
-    long long milliseconds = pvt.nano/1000000;
+    long_64 milliseconds = pvt.nano/1000000;
     milliseconds = milliseconds < 0L ? 0 : milliseconds;
-    long long timestamp = (pvt.year) * YEAR_SHIFT + (pvt.month)*MONTH_SHIFT
+    ulong_64 timestamp = (pvt.year) * YEAR_SHIFT + (pvt.month)*MONTH_SHIFT
                       + (pvt.day)*DAY_SHIFT + (pvt.hour)*HOUR_SHIFT
                       + (pvt.minute)*MINUTE_SHIFT + (pvt.second)*SECOND_SHIFT
                       + milliseconds;
