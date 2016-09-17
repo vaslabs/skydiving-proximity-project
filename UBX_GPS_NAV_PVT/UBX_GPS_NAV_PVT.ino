@@ -12,7 +12,7 @@ class GPSEntry {
      ulong_64 timestamp;
      long_64 latitude;
      long_64 longitude;
-     long_64 altitude;
+     long altitude;
 };
 
 const int SIZE = 8;
@@ -25,7 +25,7 @@ void add(unsigned long long timestamp, long long lat, long long lon, long long a
     if (fifo_index == SIZE - 1) {
       write_data();  
       fifo_index = 0; 
-    }
+    }  
     else
       fifo_index++;
     gps_entries[fifo_index].timestamp = timestamp;
@@ -38,8 +38,8 @@ byte writeBuffer[SIZE*32];
 
 int toByteBuffer(int i, long long value) {
     int longIndex;
-    long_64 mask = 0xff;
-    long_64 shiftedValue;
+    unsigned char mask = 0xff;
+    unsigned char shiftedValue;
     byte convertedValue;
     for (longIndex = 0; longIndex < 8; longIndex++) {
         shiftedValue = (value >> ((7-longIndex)*8) );
@@ -222,8 +222,8 @@ void loop() {
     Serial.print(" heading: "); Serial.print(pvt.heading/100000.0f);
     Serial.print(" hAcc: ");    Serial.print(pvt.hAcc/1000.0f);
     Serial.println();
-    long_64 milliseconds = pvt.nano/1000000;
-    milliseconds = milliseconds < 0L ? 0 : milliseconds;
+    int milliseconds = (pvt.nano/1000000);
+    milliseconds = milliseconds < 0 ? 0 : milliseconds;
     ulong_64 timestamp = (pvt.year) * YEAR_SHIFT + (pvt.month)*MONTH_SHIFT
                       + (pvt.day)*DAY_SHIFT + (pvt.hour)*HOUR_SHIFT
                       + (pvt.minute)*MINUTE_SHIFT + (pvt.second)*SECOND_SHIFT
