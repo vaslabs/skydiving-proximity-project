@@ -205,11 +205,9 @@ bool processGPS() {
 
 boolean SetupSDCard(){
   if (!SD.begin(chipSelect)){
-    Serial.println("Card failed, or not present");
     SDCardCheck = false;
     return false;
   }else{
-    Serial.println("card initialized.");
     SDCardCheck = true;
     return true;
   }
@@ -227,7 +225,6 @@ void setup(){
     serial.write( pgm_read_byte(UBLOX_INIT+i) );
     delay(5); // simulating a 38400baud pace (or less), otherwise commands are not accepted by the device.
   }
-  Serial.println("GPS Device has been configured");
   SetupSDCard();
 }
 
@@ -247,19 +244,10 @@ void loop() {
   buttonState = digitalRead(buttonPin);
   if(buttonState == HIGH && loggingStarted == false && SDCardCheck == true) {
     loggingStarted = true;
-    Serial.println("Logging started");
     digitalWrite(ledPin, HIGH);
     delay(1000);
   }
   if ( processGPS()  && loggingStarted == true) {
-    Serial.print("#SV: ");      Serial.print(pvt.numSV);
-    Serial.print(" fixType: "); Serial.print(pvt.fixType);
-    Serial.print(" Date:");     Serial.print(pvt.year); Serial.print("/"); Serial.print(pvt.month); Serial.print("/"); Serial.print(pvt.day); Serial.print(" "); Serial.print(pvt.hour); Serial.print(":"); Serial.print(pvt.minute); Serial.print(":"); Serial.print(pvt.second);
-    Serial.print(" lat/lon: "); Serial.print(pvt.lat/10000000.0f); Serial.print(","); Serial.print(pvt.lon/10000000.0f);
-    Serial.print(" gSpeed: ");  Serial.print(pvt.gSpeed/1000.0f);
-    Serial.print(" heading: "); Serial.print(pvt.heading/100000.0f);
-    Serial.print(" hAcc: ");    Serial.print(pvt.hAcc/1000.0f);
-    Serial.println();
     long_64 milliseconds = pvt.nano/1000000;
     milliseconds = milliseconds < 0L ? 0 : milliseconds;
     ulong_64 timestamp = (pvt.year) * YEAR_SHIFT + (pvt.month)*MONTH_SHIFT
