@@ -1,21 +1,31 @@
 #include <SD.h>
-
 #include <SoftwareSerial.h>
-// Connect the GPS RX/TX to arduino pins 4 and 3
+// Connect the GPS RX/TX to arduino pins 2 and 3
 SoftwareSerial serial = SoftwareSerial(2,3);
 const int chipSelect = 10;
+
+const int buttonPin = 6;     // the number of the pushbutton pin
+const int ledPin =  7;       // the number of the LED pin
+int buttonState = 0;
+boolean loggingStarted = false;
+boolean SDCardCheck;
+
+boolean dataFile_created = false;
+String dataFile_name;
+
 typedef unsigned long long ulong_64;
 typedef long long long_64;
+
 //-------------------Buffer-----------------------
 class GPSEntry {
   public: 
      ulong_64 timestamp;
      long_64 latitude;
      long_64 longitude;
-     long altitude;
+     long_64 altitude;
 };
 
-const int SIZE = 8;
+const int SIZE = 4;
 
 GPSEntry gps_entries[SIZE];
 
@@ -25,7 +35,7 @@ void add(unsigned long long timestamp, long long lat, long long lon, long long a
     if (fifo_index == SIZE - 1) {
       write_data();  
       fifo_index = 0; 
-    }  
+    }
     else
       fifo_index++;
     gps_entries[fifo_index].timestamp = timestamp;
@@ -38,8 +48,8 @@ byte writeBuffer[SIZE*32];
 
 int toByteBuffer(int i, long long value) {
     int longIndex;
-    unsigned char mask = 0xff;
-    unsigned char shiftedValue;
+    long_64 mask = 0xff;
+    long_64 shiftedValue;
     byte convertedValue;
     for (longIndex = 0; longIndex < 8; longIndex++) {
         shiftedValue = (value >> ((7-longIndex)*8) );
@@ -63,10 +73,14 @@ void toBytes() {
 
 void write_data() {
   toBytes();
-  //Serial.write(writeBuffer,SIZE*32);
-  File dataFile = SD.open("datalog.sdc", FILE_WRITE);
-  dataFile.write(writeBuffer,SIZE*32);
-  dataFile.close();
+  File dataFile = SD.open(dataFile_name, FILE_WRITE);
+  if(dataFile){
+    dataFile.write(writeBuffer,SIZE*32);
+    dataFile.close();
+  }else{
+    blink();
+    SetupSDCard();
+  }
 }
 
 //-----------------End of buffer------------------
@@ -189,21 +203,32 @@ bool processGPS() {
   return false;
 }
 
-void setup() 
-{
+boolean SetupSDCard(){
+  if (!SD.begin(chipSelect)){
+    Serial.println("Card failed, or not present");
+    SDCardCheck = false;
+    return false;
+  }else{
+    Serial.println("card initialized.");
+    SDCardCheck = true;
+    return true;
+  }
+}
+
+void blink(){
+  digitalWrite(ledPin, HIGH);delay(300); digitalWrite(ledPin, LOW); delay(300); digitalWrite(ledPin, HIGH);delay(300); digitalWrite(ledPin, LOW); delay(300);
+}
+void setup(){
   Serial.begin(9600);
   serial.begin(9600);
+  pinMode(ledPin, OUTPUT);
+  pinMode(buttonPin, INPUT);
   for(int i = 0; i < sizeof(UBLOX_INIT); i++) {                        
     serial.write( pgm_read_byte(UBLOX_INIT+i) );
     delay(5); // simulating a 38400baud pace (or less), otherwise commands are not accepted by the device.
   }
   Serial.println("GPS Device has been configured");
-  if (!SD.begin(chipSelect)) {
-    Serial.println("Card failed, or not present");
-    // don't do anything more:
-    return;
-  }
-  Serial.println("card initialized.");
+  SetupSDCard();
 }
 
 const ulong_64 YEAR_SHIFT = 10000000000000L;
@@ -212,8 +237,21 @@ const ulong_64 DAY_SHIFT = 1000000000L;
 const ulong_64 HOUR_SHIFT = 10000000L;
 const ulong_64 MINUTE_SHIFT = 100000L;
 const ulong_64 SECOND_SHIFT = 1000L;
+
 void loop() {
-  if ( processGPS() ) {
+  if(SDCardCheck == false){
+    //If SD card is not ready blink the LED and try to reinitialize it
+    blink();
+    SetupSDCard();
+  }
+  buttonState = digitalRead(buttonPin);
+  if(buttonState == HIGH && loggingStarted == false && SDCardCheck == true) {
+    loggingStarted = true;
+    Serial.println("Logging started");
+    digitalWrite(ledPin, HIGH);
+    delay(1000);
+  }
+  if ( processGPS()  && loggingStarted == true) {
     Serial.print("#SV: ");      Serial.print(pvt.numSV);
     Serial.print(" fixType: "); Serial.print(pvt.fixType);
     Serial.print(" Date:");     Serial.print(pvt.year); Serial.print("/"); Serial.print(pvt.month); Serial.print("/"); Serial.print(pvt.day); Serial.print(" "); Serial.print(pvt.hour); Serial.print(":"); Serial.print(pvt.minute); Serial.print(":"); Serial.print(pvt.second);
@@ -222,13 +260,22 @@ void loop() {
     Serial.print(" heading: "); Serial.print(pvt.heading/100000.0f);
     Serial.print(" hAcc: ");    Serial.print(pvt.hAcc/1000.0f);
     Serial.println();
-    int milliseconds = (pvt.nano/1000000);
-    milliseconds = milliseconds < 0 ? 0 : milliseconds;
+    long_64 milliseconds = pvt.nano/1000000;
+    milliseconds = milliseconds < 0L ? 0 : milliseconds;
     ulong_64 timestamp = (pvt.year) * YEAR_SHIFT + (pvt.month)*MONTH_SHIFT
                       + (pvt.day)*DAY_SHIFT + (pvt.hour)*HOUR_SHIFT
                       + (pvt.minute)*MINUTE_SHIFT + (pvt.second)*SECOND_SHIFT
                       + milliseconds;
     add(timestamp, pvt.lat, pvt.lon, pvt.hMSL);
+    if(!dataFile_created){
+      dataFile_name = random(99999999);
+      dataFile_name = dataFile_name+".sdc";
+      while(SD.exists(dataFile_name)){
+        dataFile_name = "";
+        dataFile_name = random(99999999);
+        dataFile_name = dataFile_name+".sdc";
+      }
+      dataFile_created = true;
+    }
   }
 }
-
