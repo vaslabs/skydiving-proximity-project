@@ -3,7 +3,6 @@
 #include <SPI.h>
 #include <SD.h>
 
-byte x;
 const int chipSelect = 10;
 const int SIZE = 64;
 
