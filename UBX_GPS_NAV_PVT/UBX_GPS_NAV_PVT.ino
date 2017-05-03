@@ -1,6 +1,9 @@
+#include <SPI.h>
+
 #include <SD.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
+#include <stdint.h>
 #include <MS561101BA.h>
 #define MOVAVG_SIZE 32
 
@@ -26,16 +29,13 @@ boolean SDCardCheck;
 boolean dataFile_created = false;
 String dataFile_name;
 
-typedef unsigned long long ulong_64;
-typedef long long long_64;
-
 //-------------------Buffer-----------------------
 class GPSEntry {
   public: 
-     ulong_64 timestamp;
-     long_64 latitude;
-     long_64 longitude;
-     long_64 altitude;
+     uint64_t timestamp;
+     int32_t latitude;
+     int32_t longitude;
+     float altitude;
 };
 
 const int SIZE = 2;
@@ -44,7 +44,7 @@ GPSEntry gps_entries[SIZE];
 
 int fifo_index = -1;
 
-void add(unsigned long long timestamp, long long lat, long long lon, long long alt) {
+void add(unsigned long long timestamp, uint32_t lat, uint32_t lon, float alt) {
     if (fifo_index == SIZE - 1) {
       write_data();  
       fifo_index = 0; 
@@ -57,15 +57,15 @@ void add(unsigned long long timestamp, long long lat, long long lon, long long a
     gps_entries[fifo_index].altitude = alt;
 }
 
-byte writeBuffer[SIZE*32];
+byte writeBuffer[SIZE*20];
 
-int toByteBuffer(int i, long long value) {
-    int longIndex;
-    long_64 mask = 0xff;
-    long_64 shiftedValue;
+int toByteBuffer(int i, uint64_t value, int bitSize) {
+    int bitIndex;
+    int64_t mask = 0xff;
+    int64_t shiftedValue;
     byte convertedValue;
-    for (longIndex = 0; longIndex < 8; longIndex++) {
-        shiftedValue = (value >> ((7-longIndex)*8) );
+    for (bitIndex = 0; bitIndex < bitSize; bitIndex++) {
+        shiftedValue = (value >> ((bitSize - 1 -bitIndex)*bitSize) );
         convertedValue = shiftedValue & mask;
         writeBuffer[i++] = convertedValue;
     }
@@ -75,11 +75,11 @@ int toByteBuffer(int i, long long value) {
 void toBytes() {
    int i = 0;
    int entryIndex = 0;
-   while (i < SIZE*32) {
-       i = toByteBuffer(i, gps_entries[entryIndex].timestamp);
-       i = toByteBuffer(i, gps_entries[entryIndex].latitude);
-       i = toByteBuffer(i, gps_entries[entryIndex].longitude);
-       i = toByteBuffer(i, gps_entries[entryIndex].altitude);
+   while (i < SIZE*20) {
+       i = toByteBuffer(i, gps_entries[entryIndex].timestamp, 8);
+       i = toByteBuffer(i, gps_entries[entryIndex].latitude, 4);
+       i = toByteBuffer(i, gps_entries[entryIndex].longitude, 4);
+       i = toByteBuffer(i, gps_entries[entryIndex].altitude, 4);
        entryIndex++;    
    }
 }
@@ -257,12 +257,12 @@ void setup(){
   SetupSDCard();
 }
 
-const ulong_64 YEAR_SHIFT = 10000000000000L;
-const ulong_64 MONTH_SHIFT = 100000000000L;
-const ulong_64 DAY_SHIFT = 1000000000L;
-const ulong_64 HOUR_SHIFT = 10000000L;
-const ulong_64 MINUTE_SHIFT = 100000L;
-const ulong_64 SECOND_SHIFT = 1000L;
+const uint64_t YEAR_SHIFT = 10000000000000L;
+const uint64_t MONTH_SHIFT = 100000000000L;
+const uint64_t DAY_SHIFT = 1000000000L;
+const uint64_t HOUR_SHIFT = 10000000L;
+const uint64_t MINUTE_SHIFT = 100000L;
+const uint64_t SECOND_SHIFT = 1000L;
 
 void loop() {
   if(SDCardCheck == false){
@@ -273,9 +273,9 @@ void loop() {
     press = baro.getPressure(MS561101BA_OSR_4096);
     pushAvg(press);
     press = getAvg(movavg_buff, MOVAVG_SIZE);
-    long_64 milliseconds = pvt.nano/1000000;
+    int64_t milliseconds = pvt.nano/1000000;
     milliseconds = milliseconds < 0L ? 0 : milliseconds;
-    ulong_64 timestamp = (pvt.year) * YEAR_SHIFT + (pvt.month)*MONTH_SHIFT
+    uint64_t timestamp = (pvt.year) * YEAR_SHIFT + (pvt.month)*MONTH_SHIFT
                       + (pvt.day)*DAY_SHIFT + (pvt.hour)*HOUR_SHIFT
                       + (pvt.minute)*MINUTE_SHIFT + (pvt.second)*SECOND_SHIFT
                       + milliseconds;
